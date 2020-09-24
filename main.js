@@ -70,15 +70,76 @@ function register() {
     }
 }
 
+function loginFieldsAreValid(username, password) {
+    if (username === '' || password === '') {
+        displayErrorToast("Please fill all the fields correctly.");
+        return false;
+    }
+    return true;
+}
+
 function login() {
     /***
      * @todo Complete this function.
      * @todo 1. Write code for form validation.
      * @todo 2. Fetch the auth token from backend and login the user.
      */
+    
+    const username = document.getElementById('inputUsername').value.trim();
+    const password = document.getElementById('inputPassword').value;
+
+    if (loginFieldsAreValid(username, password)) {
+        displayInfoToast("Please wait...");
+
+        const DataForApiRequest = {
+            username: username,
+            password: password
+        }
+
+        $.ajax({
+            url: API_BASE_URL + 'auth/login/',
+            method: 'POST',
+            data: DataForApiRequest,
+            success: function(data, status, xhr) {
+                localStorage.setItem('token', data.token);
+                window.location.href = '/';
+                console.log('success in login');
+            },
+            error: function(xhr, status, err) {
+                displayErrorToast('NO account with this username exists');
+            }
+        })
+    }
 }
 
 function addTask() {
+    $(document).ready(function(){
+        var x = document.querySelector('#new-task').value;
+        if(x!==""){
+            $.ajax({
+                url: API_BASE_URL + 'todo/create/',
+                method: 'POST',
+                data: {"title":x},
+                headers: {
+                    Authorization: 'Token ' + localStorage.getItem('token'),
+                },
+                success: function(data, status, xhr) {    
+                    $( ".list-group" ).replaceWith( '<ul class="list-group todo-available-tasks">'+
+                    '<span class="badge badge-primary badge-pill todo-available-tasks-text">'+
+                    '    Available Tasks'+
+                    '</span> '+
+                    '</ul>');
+                    getTasks();
+                    displayInfoToast('A new Task added');
+                    document.querySelector('#new-task').value="";
+                },
+                error: function(xhr, status, err) {
+                    displayErrorToast('can not add the task');
+                }
+            })
+        }
+    });
+
     /**
      * @todo Complete this function.
      * @todo 1. Send the request to add the task to the backend server.
@@ -99,6 +160,23 @@ function deleteTask(id) {
      * @todo 1. Send the request to delete the task to the backend server.
      * @todo 2. Remove the task from the dom.
      */
+    
+    $.ajax({
+        headers: {
+            Authorization: 'Token ' + localStorage.getItem('token'),
+        },
+        url: API_BASE_URL + 'todo/'+id+'/',
+        method: 'DELETE',
+        success: function () {
+            displaySuccessToast('You have done another task and we have smacked it out.')
+            $( "#my" + id ).remove();
+        },
+        error: function (error) {
+            displayErrorToast('Some Error in deleting.  :( ')
+        }
+    })
+
+
 }
 
 function updateTask(id) {
@@ -107,4 +185,30 @@ function updateTask(id) {
      * @todo 1. Send the request to update the task to the backend server.
      * @todo 2. Update the task in the dom.
      */
+    let x=document.getElementById('input-button-' + id).value;
+    console.log(x);
+    if(x===""){
+        displayErrorToast('Complete the edit field');
+    }else{
+        $.ajax({
+            headers: {
+                Authorization: 'Token ' + localStorage.getItem('token'),
+            },
+            url: API_BASE_URL + 'todo/'+id+'/',
+            data: {"title":x},
+            method: 'PUT',
+            success: function (data, status, xhr) {
+                displaySuccessToast('You have done another task and we have smacked it out.')
+                $(  "#my" + id ).replaceWith('<li class="list-group-item d-flex justify-content-between align-items-center"><input id="input-button-'+id+'" type="text" class="form-control todo-edit-task-input hideme" placeholder="Edit The Task"><div id="done-button-'+id+'"  class="input-group-append hideme"><button class="btn btn-outline-secondary todo-update-task" type="button" onclick="updateTask('+id+')">Done</button></div><div id="task-'+id+'" class="todo-task">'+x+'</div><span id="task-actions-'+id+'"><button style="margin-right:5px;" type="button" onclick="editTask('+id+')"class="btn btn-outline-warning"><img src="https://res.cloudinary.com/nishantwrp/image/upload/v1587486663/CSOC/edit.png"width="18px" height="20px"></button><button type="button" class="btn btn-outline-danger" onclick="deleteTask('+id+')"><img src="https://res.cloudinary.com/nishantwrp/image/upload/v1587486661/CSOC/delete.svg"width="18px" height="22px"></button></span></li>');
+                document.getElementById('task-' + id).classList.remove('hideme');
+                document.getElementById('task-actions-' + id).classList.remove('hideme');
+                document.getElementById('input-button-' + id).classList.add('hideme');
+                document.getElementById('done-button-' + id).classList.add('hideme');
+                
+            },
+            error: function (error) {
+                displayErrorToast('Some Error in EDITING.  :( ')
+            }
+        })
+    }
 }
